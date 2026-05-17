@@ -31,6 +31,7 @@ app.use(mongoSanitize());
 
 const allowedOrigins = [
   process.env.FRONTEND_URL,
+  'https://agent-6a0a426fc51e71e9--playful-queijadas-74e9bf.netlify.app', // Temporary or permanent branch URL
   'http://localhost:5173',
   'http://127.0.0.1:4173',
   'http://localhost:4173',
@@ -38,19 +39,20 @@ const allowedOrigins = [
 ].filter(Boolean);
 
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.includes(origin)) {
+  origin: (origin, callback) => {
+    // If the origin matches our whitelist or there is no origin (like Postman/Server-to-server)
+    if (!origin || allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-
-    // IMPORTANT: DO NOT THROW ERROR
+    // FIX: Pass null for the error, and false to gracefully deny access without throwing a 500
     return callback(null, false);
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
 }));
+
+// Explicitly handle preflight requests across all routes safely
 app.options('*', cors());
 
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 120, standardHeaders: true, legacyHeaders: false });
