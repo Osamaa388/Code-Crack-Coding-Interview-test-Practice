@@ -29,9 +29,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use(mongoSanitize());
 
+// Keep your hardcoded main production domains here
 const allowedOrigins = [
   process.env.FRONTEND_URL,
-  'https://agent-6a0a426fc51e71e9--playful-queijadas-74e9bf.netlify.app', // Temporary or permanent branch URL
   'http://localhost:5173',
   'http://127.0.0.1:4173',
   'http://localhost:4173',
@@ -40,18 +40,21 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // If the origin matches our whitelist or there is no origin (like Postman/Server-to-server)
-    if (!origin || allowedOrigins.includes(origin)) {
+    // 1. Allow server-to-server or Postman requests (no origin header)
+    if (!origin) return callback(null, true);
+
+    // 2. FIX: Allow any deployment branch or preview link coming from Vercel dynamically
+    if (origin.endsWith('.vercel.app') || allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-    // FIX: Pass null for the error, and false to gracefully deny access without throwing a 500
+
+    // Explicitly reject unauthorized domains safely without crashing the app
     return callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
 }));
-
 // Explicitly handle preflight requests across all routes safely
 app.options('*', cors());
 
